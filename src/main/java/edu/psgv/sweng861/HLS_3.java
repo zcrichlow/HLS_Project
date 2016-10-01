@@ -1,0 +1,71 @@
+package edu.psgv.sweng861;
+
+import java.util.ArrayList;
+import java.util.Scanner;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class HLS_3 {
+
+private static final Logger logger = LogManager.getLogger();	
+	
+	public static void main(String[] args) {
+		logger.info(">>main()");			
+		
+		PlaylistManager pm = new PlaylistManager();
+		ArrayList<Playlist> playlists;
+		Scanner ci = new Scanner(System.in);
+		String batch = "No batch file found.";
+	
+		while(true) {
+//			Check for a batch file.
+			playlists = new ArrayList<Playlist>();
+			ReadTextFile rtf = new ReadTextFile();	
+			String lines = "";		
+			if (args.length == 0) { // check for a batch file if none, keep going
+				System.out.println(batch);
+				batch = "";
+		        System.out.println("Please enter a url, or a txt file to start. "
+		        		+ "Enter 'quit' to exit:");
+		        String input = ci.nextLine();
+		        if (input.equals("quit")) {
+		        	System.out.println("Closed.");
+		            break;
+		        }
+		        // check the extension for the .txt file and read it
+		        if (input.endsWith(".txt")) {
+		        	System.out.println("Reading text file.");
+		        	lines = rtf.readTextFile(input);
+		        	// read the urls and create Playlist objects in an ArrayList
+		        	playlists = pm.getPlaylistList(lines);
+		        } else if ((pm.getHttpConnection(input) == null) || 
+		        		(pm.getConnectionContents(pm.getHttpConnection(input)).equals("exception"))) {
+//		        	 do nothing. start the loop again.
+		        } else {
+//		         return the playlist arraylist from the input (check extension) and check it with the visitor
+		      		if (input.endsWith(".m3u8")) {
+			        	playlists = pm.getOnePlaylist(input);			      			
+		      		} else {
+		      			System.out.println("Input is not a playlist file.");
+		      		}
+		        }		        
+			} else {
+			// Read batch text file into a String and create a playlist
+				System.out.println("Reading batch file...");
+				lines = rtf.readTextFile(args[0]);
+				playlists = pm.getPlaylistList(lines);				
+			}
+			playlists.toString();
+			// Use the playlists that have been created and validate them
+        	for (Playlist p : playlists) {
+        		p.accept(new FirstTagChecker());
+        		p.accept(new TargetDurationChecker());
+        		p.accept(new UriSequenceChecker());
+        		p.accept(new ValidTagChecker());
+        	}		        		
+        }
+		ci.close();
+		logger.info("<<main()");
+		} // end main
+} // end HLS_3 class
